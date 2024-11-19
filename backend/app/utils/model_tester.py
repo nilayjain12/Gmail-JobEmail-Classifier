@@ -1,8 +1,6 @@
 import torch
 from transformers import LongformerForSequenceClassification, LongformerTokenizer
 import os
-# import sys
-# sys.path.insert(1, r'C:\Users\nilay\OneDrive - Cal State Fullerton (1)\Desktop\NILAY-TO-JOB-DATA\SPRING 2024\Projects\Gmail-JobEmail-Classifier')
 import config
 
 # Load the fine-tuned model and tokenizer
@@ -27,7 +25,7 @@ def predict_category(text):
     # Get model predictions
     with torch.no_grad():
         outputs = model_LF(**inputs)
-    
+
     # Get the predicted label
     predicted_label = torch.argmax(outputs.logits, dim=1).item()
     return predicted_label
