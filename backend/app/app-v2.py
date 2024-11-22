@@ -7,6 +7,10 @@ import json
 import logging
 import config
 import pickle
+from dotenv import load_dotenv
+
+# Load environment variables from the .env file
+load_dotenv()
 
 # Allow insecure transport for testing purposes
 os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
