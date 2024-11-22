@@ -1,0 +1,77 @@
+/* General Styling */
+body {
+    font-family: Arial, sans-serif;
+    margin: 20px;
+    background-color: #f9f9f9;
+    color: #333;
+}
+
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.header h1 {
+    font-size: 24px;
+    margin: 0;
+    color: #444;
+}
+
+.logout-button {
+    padding: 10px 15px;
+    background-color: #ff6666;
+    color: #fff;
+    text-decoration: none;
+    border-radius: 5px;
+    font-weight: bold;
+}
+
+.logout-button:hover {
+    background-color: #ff4d4d;
+}
+
+/* Email List Styling */
+.email-list {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+}
+
+.email {
+    background-color: #fff;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    padding: 15px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    overflow: hidden; /* Prevent overflow */
+    word-wrap: break-word; /* Ensure long words break */
+    max-width: 600px; /* Optional: Limit the width of each email box */
+    margin: 0 auto; /* Center the email boxes horizontally */
+}
+
+.email h3,
+.email h4 {
+    margin: 0 0 10px;
+    color: #333;
+    font-size: 16px;
+}
+
+.email h3 {
+    font-weight: bold;
+}
+
+.email h4 {
+    color: #555;
+    font-weight: normal;
+}
+
+.email-body {
+    font-size: 14px;
+    margin: 0;
+    color: #666;
+    line-height: 1.5;
+    max-height: 150px; /* Optional: Limit height for large content */
+    overflow-y: auto; /* Add scroll for overflow text */
+}

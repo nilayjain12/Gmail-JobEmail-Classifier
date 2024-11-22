@@ -1,39 +1,57 @@
-from flask import Flask, redirect, url_for, session, render_template, request, jsonify
+from flask import Flask, jsonify, request, render_template, redirect, url_for, session
 from google_auth_oauthlib.flow import Flow
 from googleapiclient.discovery import build
-from google.auth.transport.requests import Request
-import pickle
 import os
-import config
-import google.auth
-from google.cloud import pubsub_v1
+import base64
 import json
-import time
+import logging
+import config
+import pickle
 
+# Allow insecure transport for testing purposes
 os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
 
+# Flask app setup
 app = Flask(__name__)
-app.secret_key = 'admin'  # Replace with a strong secret key
+app.secret_key = "your_secret_key"
 
-# Scopes for Gmail access
-SCOPES = ['https://www.googleapis.com/auth/gmail.readonly']
+# OAuth and API setup
+SCOPES = ["https://www.googleapis.com/auth/gmail.readonly", "https://www.googleapis.com/auth/pubsub"]
+CLIENT_SECRETS_FILE = os.path.join(config.BASEDIR, 'config', 'credentials.json')  # Replace with your credentials file
+REDIRECT_URI = "http://localhost:5000/oauth2callback"
+WEBHOOK_URL = "https://mpa9adbc7ad7f1a56488.free.beeceptor.com"  # Replace with your webhook URL
+PUBSUB_TOPIC = "projects/job-email-classifier-442106/topics/job-email-classifier"
+PROJECT_ID = "job-email-classifier-442106"
+SUBSCRIPTION_NAME = "job-email-classifier-sub"
 
-# Your Google Cloud Project and Pub/Sub topic
-PROJECT_ID = 'job-email-classifier-442106'
-TOPIC_NAME = 'projects/job-email-classifier-442106/topics/job-email-classifier'
+# Logging setup
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
 
-@app.route('/')
+# Google OAuth flow setup
+flow = Flow.from_client_secrets_file(
+    CLIENT_SECRETS_FILE, scopes=SCOPES, redirect_uri=REDIRECT_URI
+)
+
+emails_received = []
+# In-memory storage for credentials
+user_credentials = {}
+
+@app.route("/", methods=["GET"])
 def index():
+    """Render the HTML page that will display the messages."""
+    # Check if the user is authorized
     if 'credentials' not in session:
         return redirect(url_for('authorize'))
 
-    return render_template('index.html')
-
+    # Fetch the latest emails
+    email_data = get_latest_emails()
+    return render_template("index.html", emails=email_data)
 
 @app.route('/authorize')
 def authorize():
     # Initialize the OAuth 2.0 flow
-    flow = Flow.from_client_secrets_file(os.path.join(config.BASEDIR, 'config', 'credentials.json'), scopes=SCOPES, redirect_uri='http://127.0.0.1:5000/oauth2callback')
+    flow = Flow.from_client_secrets_file(os.path.join(config.BASEDIR, 'config', 'credentials.json'), scopes=SCOPES, redirect_uri=REDIRECT_URI)
     authorization_url, state = flow.authorization_url(access_type='offline', include_granted_scopes='true')
     session['state'] = state
     return redirect(authorization_url)
@@ -41,8 +59,8 @@ def authorize():
 
 @app.route('/oauth2callback')
 def oauth2callback():
-    state = session['state']
-    flow = Flow.from_client_secrets_file(os.path.join(config.BASEDIR, 'config', 'credentials.json'), scopes=SCOPES, state=state, redirect_uri='http://127.0.0.1:5000/oauth2callback')
+    state = session.get('state')
+    flow = Flow.from_client_secrets_file(os.path.join(config.BASEDIR, 'config', 'credentials.json'), scopes=SCOPES, state=state, redirect_uri=REDIRECT_URI)
     flow.fetch_token(authorization_response=request.url)
 
     # Save credentials in the session
@@ -59,7 +77,7 @@ def register_push_notification(credentials):
     # Register for push notifications with Gmail API
     service = build('gmail', 'v1', credentials=credentials)
     watch_request = {
-        "topicName": f"projects/{PROJECT_ID}/topics/job-email-classifier",  # This should match the Pub/Sub topic
+        "topicName": PUBSUB_TOPIC,  # This should match the Pub/Sub topic
         "labelIds": ["INBOX"]
     }
 
@@ -79,18 +97,16 @@ def webhook():
 
     return '', 200
 
-
-@app.route('/get_emails', methods=['GET'])
-def get_emails():
+def get_latest_emails():
     if 'credentials' not in session:
-        return jsonify({"error": "Not authenticated"}), 401
+        return []
 
     # Load credentials from session
     credentials = pickle.loads(session['credentials'])
     service = build('gmail', 'v1', credentials=credentials)
 
     # Retrieve the latest email
-    results = service.users().messages().list(userId='me', maxResults=5).execute()
+    results = service.users().messages().list(userId='me', maxResults=1).execute()
     messages = results.get('messages', [])
 
     email_data = []
@@ -109,10 +125,10 @@ def get_emails():
             if 'parts' in payload:
                 for part in payload['parts']:
                     if part['mimeType'] == 'text/plain':  # Extract plain text only
-                        body = part['body'].get('data', '')
+                        body = part['body'].get('data', ' ')
                         break
                     elif part['mimeType'] == 'text/html':  # If plain text isn't available, fallback to HTML
-                        body = part['body'].get('data', '')
+                        body = part['body'].get('data', ' ')
                         break
             else:
                 # Check if the body is directly in the payload
@@ -120,7 +136,6 @@ def get_emails():
 
             # Decode the base64url encoded email body
             if body:
-                import base64
                 body = base64.urlsafe_b64decode(body).decode('utf-8')
 
             # Add the email data to the list
@@ -130,14 +145,22 @@ def get_emails():
                 'body': body.strip()  # Strip extra whitespace from the body
             })
 
-    return jsonify(email_data)
+    return email_data
 
+@app.route('/get_emails', methods=['GET'])
+def get_emails():
+    """Endpoint to fetch the latest emails as JSON."""
+    email_data = get_latest_emails()  # Call the function to get the latest emails
+    return jsonify(email_data)  # Return the email data as JSON
 
 @app.route('/logout')
 def logout():
-    session.pop('credentials', None)
-    return redirect(url_for('index'))
+    """Clear the session and redirect to the authorization page."""
+    session.pop('credentials', None)  # Remove the credentials from the session
+    return redirect(url_for('authorize'))  # Redirect to authorization
 
+# callback function, listen_for_messages, and other routes remain unchanged.
 
-if __name__ == '__main__':
+if __name__ == "__main__":
+    logger.info("Starting Flask app.")
     app.run(debug=True)

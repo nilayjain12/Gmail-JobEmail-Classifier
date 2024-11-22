@@ -3,46 +3,42 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Email Notifications</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <title>Email Monitor</title>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <!-- Link to CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 <body>
-    <h1>Email Notifications</h1>
-    <ul id="email-list">
-        <!-- Emails will be dynamically inserted here -->
-    </ul>
-    <a href="{{ url_for('logout') }}">Logout</a>
+    <div class="header">
+        <h1>Email Monitor</h1>
+        <a href="{{ url_for('logout') }}" class="logout-button">Logout</a>
+    </div>
+    
+    <div id="email-list" class="email-list">
+        {% for email in emails %}
+            <div class="email">
+                <h3>From: {{ email.from }}</h3>
+                <!-- <h4>Subject: {{ email.subject }}</h4> -->
+                <p class="email-body">{{ email.body }}</p>
+            </div>
+        {% endfor %}
+    </div>
 
     <script>
-        // Function to fetch and display new emails
+        // Function to fetch the latest emails from the server
         function fetchEmails() {
             $.get("/get_emails", function(data) {
-                if (data && Array.isArray(data)) {
-                    const emailList = $('#email-list');
-                    emailList.empty();  // Clear the list before adding new emails
-                    data.forEach(function(email) {
-                        emailList.append(`
-                            <li>
-                                <strong>From:</strong> ${email.from}<br>
-                                <strong>Subject:</strong> ${email.subject}<br>
-                                <strong>Body:</strong><br>
-                                <div style="border: 1px solid #ddd; padding: 10px; background-color: #f9f9f9; max-width: 600px;">
-                                    <pre>${email.body}</pre>
-                                </div>
-                            </li>
-                        `);
-                    });
-                } else {
-                    console.error("Error fetching emails:", data);
-                }
+                $('#email-list').empty(); // Clear the current list
+                data.forEach(function(email) {
+                    $('#email-list').append(
+                        '<div class="email"><h3>From: ' + email.from + '</h3><h4>Subject: ' + email.subject + '</h4><p class="email-body">' + email.body + '</p></div>'
+                    );
+                });
             });
         }
 
-        // Poll for new emails every 5 seconds
+        // Call fetchEmails every 5 seconds to check for new emails
         setInterval(fetchEmails, 5000);
-
-        // Initially fetch emails on page load
-        fetchEmails();
     </script>
 </body>
 </html>
