@@ -12,8 +12,7 @@ load_dotenv(os.path.join(config.BASEDIR, '.env'))
 os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
 
 app = Flask(__name__)
-# app.secret_key = os.getenv('FLASK_SECRET_KEY')
-app.secret_key = '496708325743-fsv5el6pc66q4snpjp6c9c0c3nogkrni'
+app.secret_key = os.getenv('FLASK_SECRET_KEY')
 
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
