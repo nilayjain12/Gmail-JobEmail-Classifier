@@ -1,19 +1,19 @@
 from flask import Flask, jsonify, render_template, redirect, url_for, session
-from dotenv import load_dotenv
 import os
 import logging
 import config
 from utils.authenticate import authorize_user, handle_oauth2callback, register_push_notification
 from utils.email_handling import get_latest_emails
 from utils.pubsub_service import handle_webhook
-
+from dotenv import load_dotenv
 # Load environment variables
 load_dotenv(os.path.join(config.BASEDIR, '.env'))
 
 os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'
 
 app = Flask(__name__)
-app.secret_key = 'gmail-authenticate'
+# app.secret_key = os.getenv('FLASK_SECRET_KEY')
+app.secret_key = '496708325743-fsv5el6pc66q4snpjp6c9c0c3nogkrni'
 
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)

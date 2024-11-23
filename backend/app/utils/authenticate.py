@@ -23,9 +23,13 @@ def authorize_user():
 
 
 def handle_oauth2callback():
-    state = session.get('state')
+    state = request.args.get('state')
+    # print(f"Session state: {state}")
+    # print(f"Request state: {request.args.get('state')}")
     flow = Flow.from_client_secrets_file(CLIENT_SECRETS_FILE, scopes=SCOPES, state=state, redirect_uri=REDIRECT_URI)
-    flow.fetch_token(authorization_response=request.url)
+    authorization_response = request.url.strip()
+    print("Request state:", authorization_response)
+    flow.fetch_token(authorization_response=authorization_response)
     credentials = flow.credentials
     session['credentials'] = pickle.dumps(credentials)
     return credentials
